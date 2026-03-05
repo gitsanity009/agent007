@@ -216,10 +216,10 @@ const model = {
         chatInputStore.browseFiles();
         break;
       case "website":
-        window.open("https://agent-zero.ai", "_blank");
+        // External links removed for classified environment
         break;
       case "github":
-        window.open("https://github.com/agent0ai/agent-zero", "_blank");
+        // External links removed for classified environment
         break;
     }
   },

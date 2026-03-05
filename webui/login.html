@@ -3,15 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Agent Zero</title>
+    <title>Login - Agent 007</title>
     <link rel="stylesheet" href="/login.css">
+    <link rel="stylesheet" href="/css/classification-banner.css">
     <link rel="icon" type="image/svg+xml" href="/public/favicon.svg">
 </head>
-<body>
+<body class="has-classification-banners">
+    <!-- Classification Banner - Top -->
+    <div class="classification-banner classification-banner-top cls-{{classification_level_css}}">
+        {{classification_text}}
+    </div>
+
     <div class="login-container">
+        <!-- DoD/JSIG Warning Banner -->
+        <div class="consent-banner">
+            <div class="consent-banner-title">NOTICE AND CONSENT</div>
+            <div class="consent-banner-text">
+                You are accessing a U.S. Government (USG) Information System (IS) that is
+                provided for USG-authorized use only. By using this IS (which includes any
+                device attached to this IS), you consent to the following conditions:
+                <ul>
+                    <li>The USG routinely intercepts and monitors communications on this IS for purposes including, but not limited to, penetration testing, COMSEC monitoring, network operations and defense, personnel misconduct (PM), law enforcement (LE), and counterintelligence (CI) investigations.</li>
+                    <li>At any time, the USG may inspect and seize data stored on this IS.</li>
+                    <li>Communications using, or data stored on, this IS are not private, are subject to routine monitoring, interception, and search, and may be disclosed or used for any USG-authorized purpose.</li>
+                    <li>This IS includes security measures (e.g., authentication and access controls) to protect USG interests -- not for your personal benefit or privacy.</li>
+                    <li>Notwithstanding the above, using this IS does not constitute consent to PM, LE or CI investigative searching or monitoring of the content of privileged communications, or work product, related to personal representation or services by attorneys, psychotherapists, or clergy, and their assistants.</li>
+                </ul>
+            </div>
+        </div>
+
         <form class="login-form" method="POST" action="/login">
-            <img src="/public/splash.jpg" alt="Agent Zero Logo" class="logo">
-            <h2>Agent Zero</h2>
+            <img src="/public/splash.jpg" alt="Agent 007 Logo" class="logo">
+            <h2>Agent 007</h2>
             <div class="input-group">
                 <label for="username">Username</label>
                 <input type="text" id="username" name="username" required>
@@ -25,6 +48,11 @@
                 <p class="error">{{ error }}</p>
             {% endif %}
         </form>
+    </div>
+
+    <!-- Classification Banner - Bottom -->
+    <div class="classification-banner classification-banner-bottom cls-{{classification_level_css}}">
+        {{classification_text}}
     </div>
 </body>
 </html>

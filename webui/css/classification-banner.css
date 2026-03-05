@@ -1,0 +1,104 @@
+/* Classification Banner - JSIG/RMF Compliant */
+.classification-banner {
+    position: fixed;
+    left: 0;
+    right: 0;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Arial', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    z-index: 10000;
+    user-select: none;
+    -webkit-user-select: none;
+    flex-shrink: 0;
+}
+
+.classification-banner-top {
+    top: 0;
+}
+
+.classification-banner-bottom {
+    bottom: 0;
+}
+
+/* Classification Level Colors per JSIG/RMF standards */
+.classification-banner.cls-unclassified {
+    background-color: #007a33;
+    color: #ffffff;
+}
+
+.classification-banner.cls-cui {
+    background-color: #502b85;
+    color: #ffffff;
+}
+
+.classification-banner.cls-confidential {
+    background-color: #0033a0;
+    color: #ffffff;
+}
+
+.classification-banner.cls-secret {
+    background-color: #c8102e;
+    color: #ffffff;
+}
+
+.classification-banner.cls-top-secret {
+    background-color: #ff8c00;
+    color: #000000;
+}
+
+.classification-banner.cls-ts-sci {
+    background-color: #fce300;
+    color: #000000;
+}
+
+/* Adjust body layout to account for banners */
+body.has-classification-banners {
+    padding-top: 24px;
+    padding-bottom: 24px;
+}
+
+body.has-classification-banners .container {
+    height: calc(100vh - 48px);
+}
+
+/* Adjust sidebar to account for top banner */
+body.has-classification-banners #left-panel {
+    height: calc(100vh - 48px);
+    top: 24px;
+}
+
+/* Adjust fixed elements */
+body.has-classification-banners .toggle-sidebar-button {
+    top: calc(var(--spacing-md) + 24px);
+}
+
+body.has-classification-banners #logo-container {
+    top: calc(var(--spacing-md) + 24px);
+}
+
+body.has-classification-banners .left-panel-top {
+    margin-top: 3.5rem;
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+    body.has-classification-banners #left-panel {
+        height: calc(100vh - 48px);
+        top: 24px;
+    }
+
+    body.has-classification-banners .toggle-sidebar-button {
+        top: calc(var(--spacing-md) + 24px);
+    }
+}
+
+/* Login page classification banner adjustments */
+body.has-classification-banners .login-container {
+    min-height: calc(100vh - 48px);
+}
