@@ -24,6 +24,7 @@ from langchain.schema import SystemMessage, HumanMessage
 
 from python.helpers.print_style import PrintStyle
 from python.helpers import files, errors
+from python.helpers.url_policy import assert_url_allowed
 from agent import Agent
 
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -453,6 +454,7 @@ class DocumentQueryHelper:
 
         if mimetype == "application/octet-stream":
             if url.scheme in ["http", "https"]:
+                assert_url_allowed(document_uri, context="document query fetch")
                 response: aiohttp.ClientResponse | None = None
                 retries = 0
                 last_error = ""
@@ -555,6 +557,7 @@ class DocumentQueryHelper:
 
     def handle_html_document(self, document: str, scheme: str) -> str:
         if scheme in ["http", "https"]:
+            assert_url_allowed(document, context="document query html loader")
             loader = AsyncHtmlLoader(web_path=document)
             parts: list[Document] = loader.load()
         elif scheme == "file":
@@ -575,6 +578,7 @@ class DocumentQueryHelper:
 
     def handle_text_document(self, document: str, scheme: str) -> str:
         if scheme in ["http", "https"]:
+            assert_url_allowed(document, context="document query html loader")
             loader = AsyncHtmlLoader(web_path=document)
             elements: list[Document] = loader.load()
         elif scheme == "file":
@@ -602,6 +606,7 @@ class DocumentQueryHelper:
                 temp_file.write(file_content_bytes)
                 temp_file_path = temp_file.name
         elif scheme in ["http", "https"]:
+            assert_url_allowed(document, context="document query pdf download")
             # download the file from the web url to a temporary file using python libraries for downloading
             import requests
             import tempfile
