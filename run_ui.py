@@ -184,7 +184,20 @@ def requires_loopback(f):
 
 # Session inactivity timeout in seconds (AC-12 control)
 # Default: 30 minutes. Configure via SESSION_TIMEOUT_MINUTES env var.
-SESSION_TIMEOUT_SECONDS = int(os.getenv("SESSION_TIMEOUT_MINUTES", "30")) * 60
+def _parse_session_timeout_seconds(value: str | None) -> int:
+    default_timeout_minutes = 30
+    try:
+        parsed_minutes = int((value or "").strip())
+    except (TypeError, ValueError):
+        parsed_minutes = default_timeout_minutes
+
+    if parsed_minutes <= 0:
+        parsed_minutes = default_timeout_minutes
+
+    return parsed_minutes * 60
+
+
+SESSION_TIMEOUT_SECONDS = _parse_session_timeout_seconds(os.getenv("SESSION_TIMEOUT_MINUTES"))
 
 
 # require authentication for handlers
