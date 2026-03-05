@@ -47,7 +47,7 @@ def test_get_logger_disables_when_file_handler_init_fails(monkeypatch):
         def __init__(self, *_args, **_kwargs):
             raise PermissionError("cannot write")
 
-    monkeypatch.setattr(audit_log.logging, "FileHandler", RaisingFileHandler)
+    monkeypatch.setattr(audit_log, "_AuditFileHandler", RaisingFileHandler)
 
     logger = audit_log._get_logger()
 
@@ -63,6 +63,34 @@ def test_emit_disables_logging_when_write_fails(monkeypatch):
             raise OSError("disk full")
 
     monkeypatch.setattr(audit_log, "_get_logger", lambda: BrokenLogger())
+
+    audit_log._emit("TOOL_EXEC", {"tool_name": "x"})
+
+    assert audit_log._logger is False
+
+
+def test_emit_disables_logging_when_handler_write_is_swallowed(monkeypatch, tmp_path):
+    _reset_audit_logger_state()
+
+    log_path = tmp_path / "audit.log"
+    handler = audit_log._AuditFileHandler(log_path, encoding="utf-8")
+
+    class BrokenStream:
+        def write(self, _msg):
+            raise OSError("disk full")
+
+        def flush(self):
+            raise OSError("disk full")
+
+    handler.stream = BrokenStream()
+    handler.setFormatter(logging.Formatter("%(message)s"))
+
+    logger = logging.getLogger("agent007.audit.test")
+    logger.handlers = []
+    logger.propagate = False
+    logger.addHandler(handler)
+
+    monkeypatch.setattr(audit_log, "_get_logger", lambda: logger)
 
     audit_log._emit("TOOL_EXEC", {"tool_name": "x"})
 

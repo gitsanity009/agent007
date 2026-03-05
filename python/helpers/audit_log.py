@@ -14,6 +14,7 @@ Configurable via environment variables:
 
 import json
 import os
+import sys
 import time
 import logging
 import threading
@@ -25,6 +26,15 @@ from python.helpers.files import get_abs_path
 _lock = threading.Lock()
 _logger = None
 _fallback_logger = logging.getLogger(__name__)
+
+
+class _AuditFileHandler(logging.FileHandler):
+    """File handler that disables audit logging when emit fails."""
+
+    def handleError(self, record):
+        exc = sys.exc_info()[1]
+        reason = f"unable to write audit log entry: {exc or 'unknown logging error'}"
+        _disable_audit_logging(reason)
 
 
 def _disable_audit_logging(reason: str):
@@ -60,7 +70,7 @@ def _get_logger():
 
     if not _logger.handlers:
         try:
-            handler = logging.FileHandler(log_path, encoding="utf-8")
+            handler = _AuditFileHandler(log_path, encoding="utf-8")
         except OSError as exc:
             return _disable_audit_logging(
                 f"unable to initialize audit log file '{log_path}': {exc}"
