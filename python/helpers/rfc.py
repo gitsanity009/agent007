@@ -6,6 +6,7 @@ import aiohttp
 from python.helpers import crypto
 
 from python.helpers import dotenv
+from python.helpers.url_policy import assert_url_allowed
 
 
 # Remote Function Call library
@@ -68,6 +69,7 @@ def _get_function(module: str, function_name: str):
 
 
 async def _send_json_data(url: str, data):
+    assert_url_allowed(url, context="rfc call")
     async with aiohttp.ClientSession() as session:
         async with session.post(
             url,

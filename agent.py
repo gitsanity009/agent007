@@ -34,6 +34,7 @@ from typing import Callable
 from python.helpers.localization import Localization
 from python.helpers.extension import call_extensions
 from python.helpers.errors import RepairableException
+from python.helpers.url_policy import enforce_on_value
 
 
 class AgentContextType(Enum):
@@ -901,6 +902,9 @@ class Agent:
                 self.loop_data.current_tool = tool  # type: ignore
                 try:
                     await self.handle_intervention()
+
+                    # Enforce URL restrictions before tool execution
+                    enforce_on_value(tool_args or {}, context=f"tool {tool_name}")
 
                     # Call tool hooks for compatibility
                     await tool.before_execution(**tool_args)

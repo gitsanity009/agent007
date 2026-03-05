@@ -42,6 +42,7 @@ from pydantic import BaseModel, Field, Discriminator, Tag, PrivateAttr
 from python.helpers import dirty_json
 from python.helpers.print_style import PrintStyle
 from python.helpers.tool import Tool, Response
+from python.helpers.url_policy import assert_url_allowed
 
 
 def normalize_name(name: str) -> str:
@@ -282,6 +283,9 @@ class MCPServerRemote(BaseModel):
                         value = normalize_name(value)
                     if key == "serverUrl":
                         key = "url"  # remap serverUrl to url
+
+                    if key == "url" and isinstance(value, str):
+                        assert_url_allowed(value, context=f"mcp server {self.name or config.get('name', 'unknown')}")
 
                     setattr(self, key, value)
             return self
