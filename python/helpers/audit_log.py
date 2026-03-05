@@ -24,6 +24,15 @@ from python.helpers.files import get_abs_path
 
 _lock = threading.Lock()
 _logger = None
+_fallback_logger = logging.getLogger(__name__)
+
+
+def _disable_audit_logging(reason: str):
+    """Disable audit logging after a recoverable initialization/runtime failure."""
+    global _logger
+    _fallback_logger.warning("Audit logging disabled: %s", reason)
+    _logger = False
+    return _logger
 
 
 def _get_logger():
@@ -38,14 +47,24 @@ def _get_logger():
 
     log_path = os.getenv("AUDIT_LOG_PATH", get_abs_path("logs/audit.log"))
     log_dir = os.path.dirname(log_path)
-    Path(log_dir).mkdir(parents=True, exist_ok=True)
+    try:
+        Path(log_dir).mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        return _disable_audit_logging(
+            f"unable to create audit log directory '{log_dir}': {exc}"
+        )
 
     _logger = logging.getLogger("agent007.audit")
     _logger.setLevel(logging.INFO)
     _logger.propagate = False
 
     if not _logger.handlers:
-        handler = logging.FileHandler(log_path, encoding="utf-8")
+        try:
+            handler = logging.FileHandler(log_path, encoding="utf-8")
+        except OSError as exc:
+            return _disable_audit_logging(
+                f"unable to initialize audit log file '{log_path}': {exc}"
+            )
         handler.setFormatter(logging.Formatter("%(message)s"))
         _logger.addHandler(handler)
 
@@ -67,7 +86,10 @@ def _emit(event_type: str, details: dict, user: str = "system", severity: str = 
     }
 
     with _lock:
-        logger.info(json.dumps(entry, default=str))
+        try:
+            logger.info(json.dumps(entry, default=str))
+        except OSError as exc:
+            _disable_audit_logging(f"unable to write audit log entry: {exc}")
 
 
 # --- Public audit event functions ---
