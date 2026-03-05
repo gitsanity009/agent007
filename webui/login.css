@@ -79,3 +79,51 @@ button:hover {
     color: #cf6679;
     margin-top: 1rem;
 }
+
+/* Login page adjustments for classification banners */
+body.has-classification-banners {
+    height: calc(100vh - 48px);
+}
+
+.login-container {
+    flex-direction: column;
+    gap: 1.5rem;
+    padding: 1rem;
+}
+
+/* DoD/JSIG Consent Banner */
+.consent-banner {
+    background-color: #1a1a1a;
+    border: 1px solid #c8102e;
+    border-radius: 0.75rem;
+    padding: 1.25rem 1.5rem;
+    max-width: 600px;
+    width: 100%;
+    text-align: left;
+    box-shadow: 0 4px 12px rgba(200, 16, 46, 0.15);
+}
+
+.consent-banner-title {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #c8102e;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 0.75rem;
+    text-align: center;
+}
+
+.consent-banner-text {
+    font-size: 0.78rem;
+    color: #a0a0a0;
+    line-height: 1.5;
+}
+
+.consent-banner-text ul {
+    margin: 0.5rem 0 0 0;
+    padding-left: 1.25rem;
+}
+
+.consent-banner-text ul li {
+    margin-bottom: 0.4rem;
+}

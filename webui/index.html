@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-    <title>Agent Zero</title>
+    <title>Agent 007</title>
     <link rel="icon" type="image/svg+xml" href="public/favicon.svg">
     <link rel="stylesheet" href="index.css">
     <link rel="stylesheet" href="css/messages.css">
@@ -19,6 +19,7 @@
     <link rel="stylesheet" href="css/notification.css">
     <link rel="stylesheet" href="css/buttons.css">
     <link rel="stylesheet" href="css/tables.css">
+    <link rel="stylesheet" href="css/classification-banner.css">
 
     <!-- Flatpickr for datetime picker -->
     <link rel="stylesheet" href="vendor/flatpickr/flatpickr.min.css">
@@ -70,10 +71,21 @@
             isDevelopment: "{{runtime_is_development}}" === "true",
             loggedIn: "{{logged_in}}" === "true",
         };
+
+        // Classification banner configuration
+        globalThis.classificationConfig = {
+            level: "{{classification_level}}",
+            text: "{{classification_text}}",
+        };
     </script>
 </head>
 
-<body class="dark-mode device-pointer" x-data>
+<body class="dark-mode device-pointer has-classification-banners" x-data>
+    <!-- Classification Banner - Top -->
+    <div id="classification-banner-top" class="classification-banner classification-banner-top cls-unclassified">
+        UNCLASSIFIED
+    </div>
+
     <div class="container">
         <!-- Sidebar Overlay -->
         <div id="sidebar-overlay" x-data>
@@ -123,6 +135,25 @@
 
     <!-- Drag and Drop Overlay Component -->
     <x-component path="chat/attachments/dragDropOverlay.html"></x-component>
+
+    <!-- Classification Banner - Bottom -->
+    <div id="classification-banner-bottom" class="classification-banner classification-banner-bottom cls-unclassified">
+        UNCLASSIFIED
+    </div>
+
+    <!-- Apply classification level from server config -->
+    <script>
+        (function() {
+            const cfg = globalThis.classificationConfig || {};
+            const level = (cfg.level || 'unclassified').toLowerCase().replace(/[\s\/]/g, '-');
+            const text = cfg.text || cfg.level || 'UNCLASSIFIED';
+            const cssClass = 'cls-' + level;
+            document.querySelectorAll('.classification-banner').forEach(function(el) {
+                el.className = el.className.replace(/cls-\S+/, cssClass);
+                el.textContent = text.toUpperCase();
+            });
+        })();
+    </script>
 
     <!-- Register Service Worker for offline support and caching -->
     <script>

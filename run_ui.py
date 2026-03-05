@@ -24,6 +24,7 @@ from python.helpers.extract_tools import load_classes_from_folder
 from python.helpers.api import ApiHandler
 from python.helpers.print_style import PrintStyle
 from python.helpers import login
+from python.helpers import audit_log
 import socketio  # type: ignore[import-untyped]
 from socketio import ASGIApp, packet
 from starlette.applications import Starlette
@@ -50,6 +51,28 @@ webapp.secret_key = os.getenv("FLASK_SECRET_KEY") or secrets.token_hex(32)
 
 UPLOAD_LIMIT_BYTES = 5 * 1024 * 1024 * 1024
 
+# Classification banner configuration (JSIG/RMF)
+# Set via environment variables: CLASSIFICATION_LEVEL and CLASSIFICATION_TEXT
+# Supported levels: unclassified, cui, confidential, secret, top-secret, ts-sci
+CLASSIFICATION_LEVELS = {
+    "unclassified": {"css": "unclassified", "text": "UNCLASSIFIED"},
+    "cui": {"css": "cui", "text": "CUI - CONTROLLED UNCLASSIFIED INFORMATION"},
+    "confidential": {"css": "confidential", "text": "CONFIDENTIAL"},
+    "secret": {"css": "secret", "text": "SECRET"},
+    "top-secret": {"css": "top-secret", "text": "TOP SECRET"},
+    "ts-sci": {"css": "ts-sci", "text": "TOP SECRET // SCI"},
+}
+
+def get_classification_config():
+    level = os.getenv("CLASSIFICATION_LEVEL", "unclassified").lower().strip()
+    config = CLASSIFICATION_LEVELS.get(level, CLASSIFICATION_LEVELS["unclassified"])
+    custom_text = os.getenv("CLASSIFICATION_TEXT", "")
+    return {
+        "level": level,
+        "css": config["css"],
+        "text": custom_text if custom_text else config["text"],
+    }
+
 # Werkzeug's default max_form_memory_size is 500_000 bytes which can trigger 413 for multipart requests
 # with larger non-file fields. Raise it to match our intended upload limit.
 WerkzeugRequest.max_form_memory_size = UPLOAD_LIMIT_BYTES
@@ -58,8 +81,9 @@ webapp.config.update(
     JSON_SORT_KEYS=False,
     SESSION_COOKIE_NAME="session_" + runtime.get_runtime_id(),  # bind the session cookie name to runtime id to prevent session collision on same host
     SESSION_COOKIE_SAMESITE="Strict",
+    SESSION_COOKIE_HTTPONLY=True,
     SESSION_PERMANENT=True,
-    PERMANENT_SESSION_LIFETIME=timedelta(days=1),
+    PERMANENT_SESSION_LIFETIME=timedelta(hours=int(os.getenv("SESSION_LIFETIME_HOURS", "8"))),
     MAX_CONTENT_LENGTH=int(os.getenv("FLASK_MAX_CONTENT_LENGTH", str(UPLOAD_LIMIT_BYTES))),
     MAX_FORM_MEMORY_SIZE=int(os.getenv("FLASK_MAX_FORM_MEMORY_SIZE", str(UPLOAD_LIMIT_BYTES))),
 )
@@ -158,6 +182,11 @@ def requires_loopback(f):
     return decorated
 
 
+# Session inactivity timeout in seconds (AC-12 control)
+# Default: 30 minutes. Configure via SESSION_TIMEOUT_MINUTES env var.
+SESSION_TIMEOUT_SECONDS = int(os.getenv("SESSION_TIMEOUT_MINUTES", "30")) * 60
+
+
 # require authentication for handlers
 def requires_auth(f):
     @wraps(f)
@@ -169,6 +198,19 @@ def requires_auth(f):
 
         if session.get('authentication') != user_pass_hash:
             return redirect(url_for('login_handler'))
+
+        # AC-12: Check session inactivity timeout
+        last_activity = session.get('last_activity', 0)
+        if last_activity and (time.time() - last_activity) > SESSION_TIMEOUT_SECONDS:
+            username = session.get('auth_user', 'unknown')
+            audit_log.log_session_timeout(username)
+            session.pop('authentication', None)
+            session.pop('auth_user', None)
+            session.pop('last_activity', None)
+            return redirect(url_for('login_handler'))
+
+        # Update last activity timestamp
+        session['last_activity'] = time.time()
 
         return await f(*args, **kwargs)
 
@@ -198,18 +240,28 @@ async def login_handler():
 
         if request.form['username'] == user and request.form['password'] == password:
             session['authentication'] = login.get_credentials_hash()
+            session['auth_user'] = user
+            session['last_activity'] = time.time()
+            audit_log.log_login_success(user, request.remote_addr)
             return redirect(url_for('serve_index'))
         else:
+            audit_log.log_login_failure(request.form.get('username', ''), request.remote_addr)
             await asyncio.sleep(1)
             error = 'Invalid Credentials. Please try again.'
 
+    cls_config = get_classification_config()
     login_page_content = files.read_file("webui/login.html")
+    login_page_content = login_page_content.replace("{{classification_level_css}}", cls_config["css"])
+    login_page_content = login_page_content.replace("{{classification_text}}", cls_config["text"])
     return render_template_string(login_page_content, error=error)
 
 
 @webapp.route("/logout")
 async def logout_handler():
+    audit_log.log_logout(session.get('auth_user', 'unknown'))
     session.pop('authentication', None)
+    session.pop('auth_user', None)
+    session.pop('last_activity', None)
     return redirect(url_for('login_handler'))
 
 
@@ -226,6 +278,7 @@ async def serve_index():
             "commit_time": "unknown",
         }
     index = files.read_file("webui/index.html")
+    cls_config = get_classification_config()
     index = files.replace_placeholders_text(
         _content=index,
         version_no=gitinfo["version"],
@@ -233,6 +286,8 @@ async def serve_index():
         runtime_id=runtime.get_runtime_id(),
         runtime_is_development=("true" if runtime.is_development() else "false"),
         logged_in=("true" if login.get_credentials_hash() else "false"),
+        classification_level=cls_config["level"],
+        classification_text=cls_config["text"],
     )
     return index
 
@@ -518,7 +573,10 @@ def run():
 
     process.set_server(_UvicornServerWrapper(server))
 
+    cls_config = get_classification_config()
+    audit_log.log_startup(cls_config["text"])
     PrintStyle().debug(f"Starting server at http://{host}:{port} ...")
+    PrintStyle().print(f"Classification Level: {cls_config['text']}")
     threading.Thread(target=wait_for_health, args=(host, port), daemon=True).start()
     try:
         server.run()
@@ -532,7 +590,7 @@ def wait_for_health(host: str, port: int):
         try:
             with urllib.request.urlopen(url, timeout=2) as resp:
                 if resp.status == 200:
-                    PrintStyle().print("Agent Zero is running.")
+                    PrintStyle().print("Agent 007 is running.")
                     return
         except Exception:
             pass
